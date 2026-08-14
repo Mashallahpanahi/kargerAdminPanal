@@ -130,7 +130,7 @@ export default function DashboardPage() {
           size="sm"
           onClick={() => loadDashboard(true)}
           disabled={refreshing}
-          className="gap-2"
+          className="gap-2 rounded-sm"
         >
           <RefreshCw
             className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}

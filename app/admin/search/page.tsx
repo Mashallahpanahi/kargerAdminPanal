@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getAllFields } from "@/app/actions/fields";
 import {
   searchJobs,
   searchUsersByField,
@@ -18,15 +20,32 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AFGHANISTAN_PROVINCES } from "@/lib/constants/afghanistan-provinces";
+import type { Field } from "@/types/field";
 import type { SearchJob, SearchUser, SearchUserTypeFilter } from "@/types/search";
 import { Briefcase, MapPin, Search, User, Users } from "lucide-react";
-import { useState } from "react";
 import {
   JobSearchResults,
   UserSearchResults,
 } from "./_components/search-results";
 import { UserTypeSelect } from "./_components/user-type-select";
+
+function normalizeFields(data: unknown): Field[] {
+  if (Array.isArray(data)) return data as Field[];
+  if (data && typeof data === "object" && "data" in data) {
+    const nested = (data as { data: unknown }).data;
+    if (Array.isArray(nested)) return nested as Field[];
+  }
+  return [];
+}
 
 export default function SearchPage() {
   const [activeTab, setActiveTab] = useState("name");
@@ -34,15 +53,42 @@ export default function SearchPage() {
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [jobs, setJobs] = useState<SearchJob[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(true);
 
   const [nameQuery, setNameQuery] = useState("");
-  const [fieldQuery, setFieldQuery] = useState("");
+  const [fieldId, setFieldId] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [combinedName, setCombinedName] = useState("");
-  const [combinedField, setCombinedField] = useState("");
+  const [combinedFieldId, setCombinedFieldId] = useState("");
   const [combinedLocation, setCombinedLocation] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [userType, setUserType] = useState<SearchUserTypeFilter>("all");
+
+  const activeFields = useMemo(
+    () => fields.filter((field) => field.isActive !== false),
+    [fields],
+  );
+
+  const loadFields = useCallback(async () => {
+    setFieldsLoading(true);
+    try {
+      const data = await getAllFields();
+      setFields(normalizeFields(data));
+    } catch (error) {
+      showToast.error("Fields", (error as Error).message);
+      setFields([]);
+    } finally {
+      setFieldsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFields();
+  }, [loadFields]);
+
+  const getFieldNameById = (id: string) =>
+    activeFields.find((field) => String(field.id) === id)?.name ?? "";
 
   const runSearch = async (fn: () => Promise<SearchUser[] | SearchJob[]>) => {
     setIsLoading(true);
@@ -74,25 +120,40 @@ export default function SearchPage() {
         }
         runSearch(() => searchUsersByName(nameQuery, userType));
         break;
-      case "field":
-        if (!fieldQuery.trim()) {
-          showToast.error("Required", "Enter a professional field.");
+      case "field": {
+        if (!fieldId) {
+          showToast.error("Required", "Select a professional field.");
           return;
         }
-        runSearch(() => searchUsersByField(fieldQuery, userType));
+        const selectedFieldName = getFieldNameById(fieldId);
+        if (!selectedFieldName) {
+          showToast.error("Required", "Selected field is invalid.");
+          return;
+        }
+        runSearch(() => searchUsersByField(selectedFieldName, userType));
         break;
+      }
       case "location":
-        if (!locationQuery.trim()) {
-          showToast.error("Required", "Enter a location.");
+        if (!locationQuery) {
+          showToast.error("Required", "Select a province.");
           return;
         }
         runSearch(() => searchUsersByLocation(locationQuery, userType));
         break;
       case "combined": {
+        const selectedField =
+          combinedFieldId && combinedFieldId !== "all"
+            ? getFieldNameById(combinedFieldId)
+            : "";
+        const selectedLocation =
+          combinedLocation && combinedLocation !== "all"
+            ? combinedLocation
+            : "";
+
         if (
           !combinedName.trim() &&
-          !combinedField.trim() &&
-          !combinedLocation.trim()
+          !selectedField &&
+          !selectedLocation
         ) {
           showToast.error("Required", "Enter at least one filter.");
           return;
@@ -101,8 +162,8 @@ export default function SearchPage() {
           searchUsersCombined(
             {
               name: combinedName,
-              field: combinedField,
-              location: combinedLocation,
+              field: selectedField,
+              location: selectedLocation,
             },
             userType,
           ),
@@ -133,7 +194,7 @@ export default function SearchPage() {
         </p>
       </div>
 
-      <Card>
+      <Card className="rounded-sm shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
@@ -186,6 +247,7 @@ export default function SearchPage() {
                   value={nameQuery}
                   onChange={(e) => setNameQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="rounded-sm"
                 />
               </div>
             </TabsContent>
@@ -194,27 +256,51 @@ export default function SearchPage() {
               <UserTypeSelect value={userType} onChange={setUserType} />
               <div className="space-y-2">
                 <Label htmlFor="field">Professional field</Label>
-                <Input
-                  id="field"
-                  placeholder="e.g. Software Engineering"
-                  value={fieldQuery}
-                  onChange={(e) => setFieldQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                />
+                <Select
+                  value={fieldId || undefined}
+                  onValueChange={setFieldId}
+                  disabled={fieldsLoading || isLoading}
+                >
+                  <SelectTrigger id="field" className="w-full rounded-sm">
+                    <SelectValue
+                      placeholder={
+                        fieldsLoading
+                          ? "Loading fields..."
+                          : "Select a field..."
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {activeFields.map((field) => (
+                      <SelectItem key={field.id} value={String(field.id)}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </TabsContent>
 
             <TabsContent value="location" className="space-y-4">
               <UserTypeSelect value={userType} onChange={setUserType} />
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="e.g. Berlin, Germany"
-                  value={locationQuery}
-                  onChange={(e) => setLocationQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                />
+                <Label htmlFor="location">Province</Label>
+                <Select
+                  value={locationQuery || undefined}
+                  onValueChange={setLocationQuery}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="location" className="w-full rounded-sm">
+                    <SelectValue placeholder="Select a province..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {AFGHANISTAN_PROVINCES.map((province) => (
+                      <SelectItem key={province} value={province}>
+                        {province}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </TabsContent>
 
@@ -228,27 +314,59 @@ export default function SearchPage() {
                     placeholder="Optional"
                     value={combinedName}
                     onChange={(e) => setCombinedName(e.target.value)}
+                    className="rounded-sm"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="combined-field">Field</Label>
-                  <Input
-                    id="combined-field"
-                    placeholder="Optional"
-                    value={combinedField}
-                    onChange={(e) => setCombinedField(e.target.value)}
-                  />
+                  <Select
+                    value={combinedFieldId || "all"}
+                    onValueChange={setCombinedFieldId}
+                    disabled={fieldsLoading || isLoading}
+                  >
+                    <SelectTrigger
+                      id="combined-field"
+                      className="w-full rounded-sm"
+                    >
+                      <SelectValue placeholder="Optional" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="all">Any field</SelectItem>
+                      {activeFields.map((field) => (
+                        <SelectItem key={field.id} value={String(field.id)}>
+                          {field.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="combined-location">Location</Label>
-                  <Input
-                    id="combined-location"
-                    placeholder="Optional"
-                    value={combinedLocation}
-                    onChange={(e) => setCombinedLocation(e.target.value)}
-                  />
+                  <Label htmlFor="combined-location">Province</Label>
+                  <Select
+                    value={combinedLocation || "all"}
+                    onValueChange={setCombinedLocation}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger
+                      id="combined-location"
+                      className="w-full rounded-sm"
+                    >
+                      <SelectValue placeholder="Optional" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="all">Any province</SelectItem>
+                      {AFGHANISTAN_PROVINCES.map((province) => (
+                        <SelectItem key={province} value={province}>
+                          {province}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                At least one of name, field, or province is required.
+              </p>
             </TabsContent>
 
             <TabsContent value="jobs" className="space-y-4">
@@ -260,11 +378,16 @@ export default function SearchPage() {
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="rounded-sm"
                 />
               </div>
             </TabsContent>
 
-            <Button onClick={handleSearch} disabled={isLoading} className="mt-4">
+            <Button
+              onClick={handleSearch}
+              disabled={isLoading}
+              className="mt-4 rounded-sm"
+            >
               <Search className="mr-2 h-4 w-4" />
               {isLoading ? "Searching..." : "Search"}
             </Button>
@@ -273,7 +396,7 @@ export default function SearchPage() {
       </Card>
 
       {hasSearched && (
-        <Card>
+        <Card className="rounded-sm shadow-none">
           <CardHeader>
             <CardTitle>Results</CardTitle>
             <CardDescription>

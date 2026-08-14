@@ -58,7 +58,7 @@ export function PlatformHealth({
   const inactiveFields = totalFields - activeFields;
 
   return (
-    <Card>
+    <Card className="rounded-sm shadow-none">
       <CardHeader>
         <CardTitle>Platform Health</CardTitle>
         <CardDescription>

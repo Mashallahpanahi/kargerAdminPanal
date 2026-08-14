@@ -50,19 +50,19 @@ export function RecentPosts({ posts, onPostDeleted }: RecentPostsProps) {
   };
 
   return (
-    <Card>
+    <Card className="rounded-sm shadow-none">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
           <CardTitle>Recent Posts</CardTitle>
           <CardDescription>3 latest job posts across the platform</CardDescription>
         </div>
-        <Button variant="outline" size="sm" asChild>
+        <Button variant="outline" size="sm" asChild className="rounded-sm">
           <Link href="/admin/posts">View all</Link>
         </Button>
       </CardHeader>
       <CardContent>
         {posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
+          <div className="flex flex-col items-center justify-center rounded-sm border border-dashed py-12 text-center">
             <p className="text-sm font-medium text-muted-foreground">
               No posts yet
             </p>
@@ -71,7 +71,7 @@ export function RecentPosts({ posts, onPostDeleted }: RecentPostsProps) {
             </p>
           </div>
         ) : (
-          <div className="divide-y rounded-lg border">
+          <div className="divide-y rounded-sm border">
             {posts.map((post) => {
               const author =
                 post.employer?.name || post.employee?.name
@@ -83,8 +83,14 @@ export function RecentPosts({ posts, onPostDeleted }: RecentPostsProps) {
                   key={post.id}
                   className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="line-clamp-2 font-medium leading-snug">
+                  <Link
+                    href={`/admin/posts/${post.id}`}
+                    className="min-w-0 flex-1 space-y-2 rounded-sm transition-colors hover:bg-muted/40"
+                  >
+                    <p className="line-clamp-1 font-medium leading-snug">
+                      {post.title || "Untitled post"}
+                    </p>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
                       {post.description || "No description"}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -103,7 +109,7 @@ export function RecentPosts({ posts, onPostDeleted }: RecentPostsProps) {
                         {post.commentsCount ?? 0}
                       </span>
                     </div>
-                  </div>
+                  </Link>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

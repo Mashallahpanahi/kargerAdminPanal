@@ -23,7 +23,7 @@ export function UserTypeSelect({ value, onChange }: UserTypeSelectProps) {
         value={value}
         onValueChange={(v) => onChange(v as SearchUserTypeFilter)}
       >
-        <SelectTrigger id="user-type" className="w-full sm:w-56">
+        <SelectTrigger id="user-type" className="w-full rounded-sm sm:w-56">
           <SelectValue placeholder="Select user type" />
         </SelectTrigger>
         <SelectContent>

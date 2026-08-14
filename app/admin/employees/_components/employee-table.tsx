@@ -16,7 +16,6 @@ import type { Employee } from "@/types/employee";
 import { Eye, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ViewEmployeeDialog } from "./view-employee-dialog";
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -32,14 +31,9 @@ export function EmployeeTable({
   const [employeeToUpdate, setEmployeeToUpdate] = useState<Employee | null>(
     null,
   );
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
-    null,
-  );
 
   const handleViewClick = (id: string) => {
-    setSelectedEmployeeId(id);
-    setViewDialogOpen(true);
+    router.push(`/admin/employees/${id}`);
   };
 
   const handleStatusClick = (employee: Employee) => {
@@ -162,12 +156,6 @@ export function EmployeeTable({
         title={`${selectedEmployeeActionLabel} Employee`}
         description={`Are you sure you want to set this employee as ${selectedEmployeeActionLabel.toLowerCase()}?`}
         confirmLabel={selectedEmployeeActionLabel}
-      />
-
-      <ViewEmployeeDialog
-        employeeId={selectedEmployeeId}
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
       />
     </>
   );

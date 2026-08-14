@@ -32,7 +32,7 @@ export function UserSearchResults({
 
   if (users.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed py-12 text-center">
+      <div className="rounded-sm border border-dashed py-12 text-center">
         <p className="text-sm font-medium text-muted-foreground">
           No users found
         </p>
@@ -44,7 +44,7 @@ export function UserSearchResults({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-hidden rounded-sm border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -61,8 +61,8 @@ export function UserSearchResults({
           {users.map((user) => {
             const manageUrl =
               user.userType === "employer"
-                ? "/admin/employers"
-                : "/admin/employees";
+                ? `/admin/employers/${user.id}`
+                : `/admin/employees/${user.id}`;
 
             return (
               <TableRow key={`${user.userType ?? "user"}-${user.id}`}>
@@ -71,7 +71,7 @@ export function UserSearchResults({
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="capitalize">
+                  <Badge variant="outline" className="rounded-sm capitalize">
                     {user.userType ?? "user"}
                   </Badge>
                 </TableCell>
@@ -82,12 +82,13 @@ export function UserSearchResults({
                     variant={
                       user.isActive === false ? "destructive" : "secondary"
                     }
+                    className="rounded-sm"
                   >
                     {user.isActive === false ? "Inactive" : "Active"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button variant="ghost" size="sm" asChild className="rounded-sm">
                     <Link href={manageUrl}>
                       <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                       Manage
@@ -120,7 +121,7 @@ export function JobSearchResults({
 
   if (jobs.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed py-12 text-center">
+      <div className="rounded-sm border border-dashed py-12 text-center">
         <p className="text-sm font-medium text-muted-foreground">
           No job posts found
         </p>
@@ -136,7 +137,7 @@ export function JobSearchResults({
       {jobs.map((job) => (
         <div
           key={job.id}
-          className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between"
+          className="flex flex-col gap-3 rounded-sm border p-4 shadow-none sm:flex-row sm:items-start sm:justify-between"
         >
           <div className="min-w-0 space-y-1">
             <p className="font-medium leading-snug">
@@ -149,7 +150,7 @@ export function JobSearchResults({
             )}
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {job.employer && (
-                <Badge variant="outline">
+                <Badge variant="outline" className="rounded-sm">
                   {job.employer.name} {job.employer.lastName}
                 </Badge>
               )}
@@ -160,7 +161,12 @@ export function JobSearchResults({
               </span>
             </div>
           </div>
-          <Button variant="outline" size="sm" asChild className="shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="shrink-0 rounded-sm"
+          >
             <Link href="/admin/posts">
               <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
               View posts

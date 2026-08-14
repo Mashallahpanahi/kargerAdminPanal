@@ -1,99 +1,98 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  getAllPosts,
-  getEmployeePosts,
-  getEmployerPosts,
-} from "@/app/actions/post";
+import { useCallback, useEffect, useState } from "react";
+import { getEmployerPosts, getPostsPaginated } from "@/app/actions/post";
+import { Pagination } from "@/components/shared/pagination";
 import { showToast, Toaster } from "@/components/shared/toasterlogin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Post } from "@/types/post";
-import { FileText, RefreshCw, Search } from "lucide-react";
+import { POSTS_PAGE_SIZE, type Post } from "@/types/post";
+import { RefreshCw, Search } from "lucide-react";
 import { PostTable } from "./_components/post-tabl";
 
-type PostFilter = "all" | "employer" | "employee";
+function matchesSearch(post: Post, lower: string): boolean {
+  if (post.title?.toLowerCase().includes(lower)) return true;
+  if (post.location?.toLowerCase().includes(lower)) return true;
+  if (post.description?.toLowerCase().includes(lower)) return true;
+  if (post.jobType?.toLowerCase().includes(lower)) return true;
+  if (post.jobStatus?.toLowerCase().includes(lower)) return true;
+  if (post.employer) {
+    const name =
+      `${post.employer.name} ${post.employer.lastName}`.toLowerCase();
+    if (
+      name.includes(lower) ||
+      post.employer.email.toLowerCase().includes(lower)
+    ) {
+      return true;
+    }
+  }
+  if (post.id.toLowerCase().includes(lower)) return true;
+  return false;
+}
 
 export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState<PostFilter>("all");
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadPosts = useCallback(async (activeFilter: PostFilter, refresh = false) => {
-    if (refresh) setIsRefreshing(true);
-    else setIsLoading(true);
+  const isSearching = searchTerm.trim().length > 0;
 
-    try {
-      let data: Post[];
-      switch (activeFilter) {
-        case "employer":
-          data = await getEmployerPosts();
-          break;
-        case "employee":
-          data = await getEmployeePosts();
-          break;
-        default:
-          data = await getAllPosts();
+  const loadPosts = useCallback(
+    async (activePage: number, activeSearch: string, refresh = false) => {
+      if (refresh) setIsRefreshing(true);
+      else setIsLoading(true);
+
+      try {
+        const trimmed = activeSearch.trim();
+
+        if (trimmed) {
+          const all = await getEmployerPosts();
+          const lower = trimmed.toLowerCase();
+          const filtered = all.filter((post) => matchesSearch(post, lower));
+          const pages = Math.max(1, Math.ceil(filtered.length / POSTS_PAGE_SIZE));
+          const safePage = Math.min(activePage, pages);
+          const start = (safePage - 1) * POSTS_PAGE_SIZE;
+          setPosts(filtered.slice(start, start + POSTS_PAGE_SIZE));
+          setTotalItems(filtered.length);
+          setTotalPages(pages);
+          if (safePage !== activePage) setPage(safePage);
+        } else {
+          const result = await getPostsPaginated({
+            type: "employer",
+            page: activePage,
+            limit: POSTS_PAGE_SIZE,
+          });
+          setPosts(result.posts);
+          setTotalItems(result.total);
+          setTotalPages(Math.max(1, result.totalPages));
+          if (result.page !== activePage) setPage(result.page);
+        }
+      } catch (error) {
+        showToast.error("Error", (error as Error).message);
+        setPosts([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-      setPosts(data);
-    } catch (error) {
-      showToast.error("Error", (error as Error).message);
-      setPosts([]);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
-    loadPosts(filter);
-  }, [filter, loadPosts]);
+    loadPosts(page, searchTerm);
+  }, [page, searchTerm, loadPosts]);
 
-  const filteredPosts = useMemo(() => {
-    if (!searchTerm.trim()) return posts;
-    const lower = searchTerm.toLowerCase();
-    return posts.filter((post) => {
-      if (post.description.toLowerCase().includes(lower)) return true;
-      if (post.employee) {
-        const name =
-          `${post.employee.name} ${post.employee.lastName}`.toLowerCase();
-        if (name.includes(lower) || post.employee.email.toLowerCase().includes(lower)) {
-          return true;
-        }
-      }
-      if (post.employer) {
-        const name =
-          `${post.employer.name} ${post.employer.lastName}`.toLowerCase();
-        if (name.includes(lower) || post.employer.email.toLowerCase().includes(lower)) {
-          return true;
-        }
-      }
-      if (post.id.toLowerCase().includes(lower)) return true;
-      return false;
-    });
-  }, [posts, searchTerm]);
-
-  const stats = useMemo(() => {
-    const employerCount = posts.filter(
-      (p) => p.employer || p.employerId,
-    ).length;
-    const employeeCount = posts.filter(
-      (p) => p.employee || p.employeeId,
-    ).length;
-    return {
-      total: posts.length,
-      employer: employerCount,
-      employee: employeeCount,
-      likes: posts.reduce((sum, p) => sum + (p.likesCount ?? 0), 0),
-      comments: posts.reduce((sum, p) => sum + (p.commentsCount ?? 0), 0),
-    };
-  }, [posts]);
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -105,15 +104,15 @@ export default function PostsPage() {
             Manage Posts
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            View, edit, and delete all job posts on the platform.
+            View and delete employer job posts on the platform.
           </p>
         </div>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => loadPosts(filter, true)}
+          onClick={() => loadPosts(page, searchTerm, true)}
           disabled={isRefreshing}
-          className="gap-2 self-start"
+          className="gap-2 self-start rounded-sm"
         >
           <RefreshCw
             className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -122,49 +121,24 @@ export default function PostsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total posts", value: stats.total },
-          { label: "Employer posts", value: stats.employer },
-          { label: "Employee posts", value: stats.employee },
-          { label: "Total engagement", value: stats.likes + stats.comments },
-        ].map((item) => (
-          <Card key={item.label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="text-2xl font-bold tabular-nums">{item.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs
-        value={filter}
-        onValueChange={(value) => setFilter(value as PostFilter)}
-      >
-        <TabsList>
-          <TabsTrigger value="all" className="gap-1.5">
-            <FileText className="h-3.5 w-3.5" />
-            All Posts
-          </TabsTrigger>
-          <TabsTrigger value="employer">Employer Posts</TabsTrigger>
-          <TabsTrigger value="employee">Employee Posts</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by description, author, email, or post ID..."
+          placeholder="Search by title, location, description, employer, or post ID..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="rounded-sm pl-10"
         />
       </div>
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant="secondary">{filteredPosts.length} posts shown</Badge>
-        {searchTerm && <span>matching &quot;{searchTerm}&quot;</span>}
+        <Badge variant="secondary" className="rounded-sm">
+          {posts.length} of {totalItems} posts
+        </Badge>
+        <span>
+          Page {page} · {POSTS_PAGE_SIZE} per page
+        </span>
+        {isSearching && <span>matching &quot;{searchTerm.trim()}&quot;</span>}
       </div>
 
       {isLoading ? (
@@ -172,10 +146,22 @@ export default function PostsPage() {
           Loading posts...
         </div>
       ) : (
-        <PostTable
-          posts={filteredPosts}
-          onPostsChanged={() => loadPosts(filter, true)}
-        />
+        <>
+          <PostTable
+            posts={posts}
+            onPostsChanged={() => loadPosts(page, searchTerm, true)}
+          />
+          {totalItems > 0 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={POSTS_PAGE_SIZE}
+              onPageChange={setPage}
+              itemNme="Posts"
+            />
+          )}
+        </>
       )}
     </div>
   );

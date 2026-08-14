@@ -19,7 +19,7 @@ export function StatCard({
   trend,
 }: StatCardProps) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:bg-card">
+    <div className="group relative overflow-hidden rounded-sm border bg-white p-5 shadow-none dark:bg-card">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -35,7 +35,7 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-sm",
             iconClassName,
           )}
         >

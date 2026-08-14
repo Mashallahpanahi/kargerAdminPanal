@@ -56,7 +56,7 @@ const actions = [
 
 export function QuickActions() {
   return (
-    <Card className="h-full">
+    <Card className="h-full rounded-sm shadow-none">
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
         <CardDescription>Jump to common management tasks</CardDescription>
@@ -66,7 +66,7 @@ export function QuickActions() {
           <Button
             key={action.href}
             variant="outline"
-            className="h-auto w-full justify-start gap-3 px-3 py-3 text-left"
+            className="h-auto w-full justify-start gap-3 rounded-sm px-3 py-3 text-left"
             asChild
           >
             <Link href={action.href}>

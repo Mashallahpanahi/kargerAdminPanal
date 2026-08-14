@@ -42,7 +42,7 @@ export function UserDistributionChart({
   const total = employers + employees;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full rounded-sm shadow-none">
       <CardHeader>
         <CardTitle>User Distribution</CardTitle>
         <CardDescription>
@@ -75,11 +75,11 @@ export function UserDistributionChart({
           </ChartContainer>
         )}
         <div className="mt-2 grid grid-cols-2 gap-3 text-center text-sm">
-          <div className="rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
+          <div className="rounded-sm bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
             <p className="text-muted-foreground">Employers</p>
             <p className="text-lg font-semibold tabular-nums">{employers}</p>
           </div>
-          <div className="rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
+          <div className="rounded-sm bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
             <p className="text-muted-foreground">Employees</p>
             <p className="text-lg font-semibold tabular-nums">{employees}</p>
           </div>

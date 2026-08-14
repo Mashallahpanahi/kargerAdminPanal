@@ -15,6 +15,8 @@ export const API_ENDPOINTS = {
     EMPLOYEES: `${API_BASE_URL}/admin/users/employees`,
     GET_EMPLOYEE_BY_ID: (employeeId: string) =>
       `${API_BASE_URL}/employee/${employeeId}`,
+    EMPLOYEE_PORTFOLIO: (employeeId: string) =>
+      `${API_BASE_URL}/employee/${employeeId}/portfolio`,
     DELETE_EMPLOYEE: (employeeId: string) =>
       `${API_BASE_URL}/admin/users/employee/${employeeId}`,
     BAN_EMPLOYEE: (employeeId: string) =>
@@ -36,7 +38,13 @@ export const API_ENDPOINTS = {
     POSTS: `${API_BASE_URL}/posts`,
     EMPLOYER_POSTS: `${API_BASE_URL}/posts/employer-posts`,
     EMPLOYEE_POSTS: `${API_BASE_URL}/posts/employee-posts`,
+    POSTS_BY_EMPLOYER: (employerId: string) =>
+      `${API_BASE_URL}/posts/employer/${employerId}`,
+    POSTS_BY_EMPLOYEE: (employeeId: string) =>
+      `${API_BASE_URL}/posts/employee/${employeeId}`,
     POST_BY_ID: (postId: string) => `${API_BASE_URL}/posts/${postId}`,
+    POST_COMMENTS: (postId: string) =>
+      `${API_BASE_URL}/posts/${postId}/comments`,
     DELETE_POST: (postId: string) => `${API_BASE_URL}/admin/posts/${postId}`,
     FIELDS: `${API_BASE_URL}/fields`,
     FIELD_BY_ID: (fieldId: string) => `${API_BASE_URL}/fields/${fieldId}`,

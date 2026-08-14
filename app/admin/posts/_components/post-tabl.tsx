@@ -15,11 +15,9 @@ import {
 } from "@/components/ui/table";
 import type { Post } from "@/types/post";
 import { formatDistanceToNow } from "date-fns";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PostEditDialog } from "./post-edit-dialog";
-import { PostViewDialog } from "./post-view-dialog";
 
 interface PostTableProps {
   posts: Post[];
@@ -47,22 +45,18 @@ function getAuthorInfo(post: Post) {
   return { name: "Unknown", email: "—", type: "employee" as const };
 }
 
+function formatLabel(value?: string | null) {
+  if (!value) return "—";
+  return value.replace(/_/g, " ");
+}
+
 export function PostTable({ posts, onPostsChanged }: PostTableProps) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  const handleViewClick = (post: Post) => {
-    setSelectedPost(post);
-    setViewDialogOpen(true);
-  };
-
-  const handleEditClick = (post: Post) => {
-    setSelectedPost(post);
-    setEditDialogOpen(true);
+  const handleViewClick = (id: string) => {
+    router.push(`/admin/posts/${id}`);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -96,11 +90,14 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-sm border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="min-w-[240px]">Description</TableHead>
+              <TableHead className="min-w-[240px]">Title</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Job Type</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Author</TableHead>
               <TableHead>Type</TableHead>
               <TableHead className="text-center">Likes</TableHead>
@@ -113,16 +110,37 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
             {posts.length > 0 ? (
               posts.map((post) => {
                 const author = getAuthorInfo(post);
+                const status = post.jobStatus || post.status;
                 return (
                   <TableRow key={post.id}>
                     <TableCell className="max-w-xs">
-                      <p className="line-clamp-2 font-medium">
+                      <p className="line-clamp-1 font-medium">
+                        {post.title || "Untitled post"}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                         {post.description}
                       </p>
-                      {post.status && (
-                        <Badge variant="outline" className="mt-1 capitalize">
-                          {post.status}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {post.location || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="rounded-sm capitalize">
+                        {formatLabel(post.jobType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {status ? (
+                        <Badge
+                          variant={
+                            status === "open" ? "secondary" : "outline"
+                          }
+                          className="rounded-sm capitalize"
+                        >
+                          {formatLabel(status)}
                         </Badge>
+                      ) : (
+                        "—"
                       )}
                     </TableCell>
                     <TableCell>
@@ -136,7 +154,7 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
                         variant={
                           author.type === "employer" ? "default" : "secondary"
                         }
-                        className="capitalize"
+                        className="rounded-sm capitalize"
                       >
                         {author.type}
                       </Badge>
@@ -157,7 +175,8 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewClick(post)}
+                          className="rounded-sm"
+                          onClick={() => handleViewClick(post.id)}
                         >
                           <Eye className="h-4 w-4" />
                           <span className="sr-only">View</span>
@@ -165,16 +184,8 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEditClick(post)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
                           onClick={() => handleDeleteClick(post.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="rounded-sm text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Delete</span>
@@ -187,7 +198,7 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={10}
                   className="py-12 text-center text-muted-foreground"
                 >
                   No posts found
@@ -204,19 +215,6 @@ export function PostTable({ posts, onPostsChanged }: PostTableProps) {
         onConfirm={confirmDelete}
         title="Delete Post"
         description="Are you sure you want to delete this post? This action cannot be undone."
-      />
-
-      <PostViewDialog
-        post={selectedPost}
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
-      />
-
-      <PostEditDialog
-        post={selectedPost}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onPostUpdated={onPostsChanged}
       />
     </>
   );
